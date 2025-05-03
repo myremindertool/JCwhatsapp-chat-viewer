@@ -3,7 +3,9 @@ import re
 from datetime import datetime
 
 st.set_page_config(page_title="WhatsApp Chat Viewer", layout="wide")
-st.title("📱 WhatsApp Chat Viewer")
+st.title("📱JC WhatsApp Chat Viewer")
+st.markdown("---")
+st.markdown("📌 Created by **JC**", unsafe_allow_html=True)
 
 uploaded_file = st.file_uploader("Upload your exported WhatsApp .txt file", type=["txt"])
 
