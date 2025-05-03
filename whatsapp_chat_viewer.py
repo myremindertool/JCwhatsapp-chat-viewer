@@ -6,35 +6,41 @@ st.set_page_config(page_title="WhatsApp Chat Viewer", layout="wide")
 st.title("📱JC WhatsApp Chat Viewer")
 st.markdown("---")
 st.markdown("📌 Created by **JC**", unsafe_allow_html=True)
-
 uploaded_file = st.file_uploader("Upload your exported WhatsApp .txt file", type=["txt"])
-
 if uploaded_file:
     chat_data = uploaded_file.read().decode("utf-8")
 
     # Clean special characters
     chat_data = chat_data.replace('\u202f', ' ').replace('\u200e', '')
 
-    # Regex for message extraction
-    pattern = re.compile(r"\[(\d{2}/\d{2}/\d{4}), (\d{1,2}:\d{2}:\d{2} [APMapm]{2})\] (.*?): (.*)", re.UNICODE)
-    messages = pattern.findall(chat_data)
+    # Regex for both iPhone and Android formats
+    iphone_pattern = re.compile(r"\[(\d{2}/\d{2}/\d{4}), (\d{1,2}:\d{2}:\d{2} [APMapm]{2})\] (.*?): (.*)", re.UNICODE)
+    android_pattern = re.compile(r"(\d{2}/\d{2}/\d{4}), (\d{1,2}:\d{2} [apm]{2}) - (.*?): (.*)", re.IGNORECASE)
 
-    if not messages:
+    iphone_matches = iphone_pattern.findall(chat_data)
+    android_matches = android_pattern.findall(chat_data)
+
+    parsed_messages = []
+
+    # Process iPhone messages
+    for date_str, time_str, sender, message in iphone_matches:
+        try:
+            dt = datetime.strptime(f"{date_str} {time_str}", "%d/%m/%Y %I:%M:%S %p")
+            parsed_messages.append({"datetime": dt, "sender": sender.strip(), "message": message.strip()})
+        except ValueError:
+            continue
+
+    # Process Android messages
+    for date_str, time_str, sender, message in android_matches:
+        try:
+            dt = datetime.strptime(f"{date_str} {time_str}", "%d/%m/%Y %I:%M %p")
+            parsed_messages.append({"datetime": dt, "sender": sender.strip(), "message": message.strip()})
+        except ValueError:
+            continue
+
+    if not parsed_messages:
         st.error("No valid messages found. Please double-check the format of your .txt file.")
     else:
-        # Store parsed messages in list of dicts
-        parsed_messages = []
-        for date_str, time_str, sender, message in messages:
-            try:
-                dt = datetime.strptime(f"{date_str} {time_str}", "%d/%m/%Y %I:%M:%S %p")
-                parsed_messages.append({
-                    "datetime": dt,
-                    "sender": sender.strip(),
-                    "message": message.strip()
-                })
-            except ValueError:
-                continue
-
         # Get unique senders
         senders = sorted(set(m['sender'] for m in parsed_messages))
 
@@ -61,5 +67,8 @@ if uploaded_file:
                 st.caption(msg['datetime'].strftime("%d %b %Y • %I:%M %p"))
 
         st.success(f"✅ Displaying {len(filtered_messages)} of {len(parsed_messages)} total messages.")
+
+    st.markdown("---")
+    st.markdown("📌 Created by **JC**", unsafe_allow_html=True)
 else:
     st.info("Please upload your WhatsApp .txt file to begin.")
